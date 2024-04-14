@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import TodoCard from "./TodoCard";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, deleteField } from "firebase/firestore";
 import { db } from "../firebase";
+import useFetchTodos from "../hooks/fetchTodos";
 
 export default function UserDashboard() {
   const { userInfo, currentUser } = useAuth();
-  const [addTodo, setAddTodo] = useState(false);
+  const [edit, setEdit] = useState(null);
   const [todo, setTodo] = useState("");
-  const [todoList, setTodoList] = useState({});
-  console.log(todoList);
+  const [editedValue, setEditedValue] = useState("");
+  const { todos, setTodos, loading, error } = useFetchTodos();
 
   // useEffect(() => {
   //   if (!userInfo || Object.keys(userInfo).length === 0) {
@@ -22,14 +23,11 @@ export default function UserDashboard() {
       return;
     }
     const newKey =
-      Object.keys(todoList).length === 0
-        ? 1
-        : Math.max(...Object.keys(todoList)) + 1;
-    setTodoList({
-      ...todoList,
+      Object.keys(todos).length === 0 ? 1 : Math.max(...Object.keys(todos)) + 1;
+    setTodos({
+      ...todos,
       [newKey]: todo,
     });
-    setTodo("");
     const userRef = doc(db, "users", currentUser.uid);
     await setDoc(
       userRef,
@@ -40,10 +38,61 @@ export default function UserDashboard() {
       },
       { merge: true }
     );
+    setTodo("");
+  }
+
+  async function handleEditTodo() {
+    if (!editedValue) {
+      return;
+    }
+    const newKey = edit;
+    setTodos({
+      ...todos,
+      [newKey]: editedValue,
+    });
+    const userRef = doc(db, "users", currentUser.uid);
+    await setDoc(
+      userRef,
+      {
+        todos: {
+          [newKey]: editedValue,
+        },
+      },
+      { merge: true }
+    );
+    setEdit(null);
+    setEditedValue("");
+  }
+
+  function handleAddEdit(todoKey) {
+    return () => {
+      todos[todoKey];
+      setEdit(todoKey);
+      setEditedValue(todos[todoKey]);
+    };
+  }
+
+  function handleDelete(todoKey) {
+    return async () => {
+      const tempObj = { ...todos };
+      delete tempObj[todoKey];
+
+      setTodos(tempObj);
+      const userRef = doc(db, "users", currentUser.uid);
+      await setDoc(
+        userRef,
+        {
+          todos: {
+            [todoKey]: deleteField(),
+          },
+        },
+        { merge: true }
+      );
+    };
   }
 
   return (
-    <div className="w-full max-w-[65ch] text-xs sm:text-sm mx-auto flex flex-col gap-3 sm:gap-5">
+    <div className="w-full max-w-[65ch] text-xs sm:text-sm mx-auto flex flex-col flex-1 gap-3 sm:gap-5">
       <div className="flex items-stretch">
         <input
           type="text"
@@ -59,10 +108,28 @@ export default function UserDashboard() {
           ADD
         </button>
       </div>
-      {userInfo && (
+      {loading && (
+        <div className="flex-1 grid place-items-center text-6xl">
+          <i className="fa-solid fa-spinner animate-spin" />
+        </div>
+      )}
+      {userInfo && !loading && (
         <>
-          {Object.keys(todoList).map((todo, i) => {
-            return <TodoCard key={i}>{todoList[todo]}</TodoCard>;
+          {Object.keys(todos).map((todo, i) => {
+            return (
+              <TodoCard
+                handleEditTodo={handleEditTodo}
+                key={i}
+                handleAddEdit={handleAddEdit}
+                edit={edit}
+                todoKey={todo}
+                editedValue={editedValue}
+                setEditedValue={setEditedValue}
+                handleDelete={handleDelete}
+              >
+                {todos[todo]}
+              </TodoCard>
+            );
           })}
         </>
       )}
