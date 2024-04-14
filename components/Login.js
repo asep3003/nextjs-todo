@@ -58,7 +58,7 @@ export default function Login() {
         className="duration-300 hover:scale-110 cursor-pointer"
         onClick={() => setIsLoggingIn(!isLoggingIn)}
       >
-        {isLoggingIn ? "Login" : "Register"}
+        {isLoggingIn ? "Register" : "Login"}
       </h2>
     </div>
   );

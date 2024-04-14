@@ -25,8 +25,7 @@ export default function Document() {
       <body>
         <Main />
         <NextScript />
-        <div id="portal1"></div>
-        <div id="portal2"></div>
+        <div id="portal"></div>
       </body>
     </Html>
   );
